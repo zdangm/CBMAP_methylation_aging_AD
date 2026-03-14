@@ -7,36 +7,51 @@ library(stringr)
 load('ROSMAP_pheno.RData')
 pheno_df$projid <- as.character(str_pad(pheno_df$projid, width = 8, pad = "0", side = "left"))
 hml_info <- read_excel('dataset_1495_cross-sectional_02-16-2025.xlsx')
+cogdx_1 <- hml_info %>% filter(
+  cogdx %in% c(4,5,6)) %>% pull(projid) %>% unique()
 pheno_df$age_death <- as.numeric(unlist(hml_info[match(pheno_df$projid, hml_info$projid), 'age_death']))
 pheno_df$msex <- as.factor(pheno_df$msex)
 pheno_df$Sample_Plate <- as.factor(pheno_df$Sample_Plate)
 pheno_df$batch <- as.factor(pheno_df$batch)
-pheno_df$NeuN_pos <- as.numeric(pheno_df$NeuN_pos)
+pheno_df$Study <- as.factor(pheno_df$Study)
+pheno_df <- pheno_df[! pheno_df$projid %chin% cogdx_1,]
 
-# prepare methylation matrix
-Mdat <- h5read('BMIQ_Mdat_combat.h5', 'Mdat')
-colnames(Mdat) = h5read('BMIQ_Mdat_combat.h5','colnames')
-rownames(Mdat) = h5read('BMIQ_Mdat_combat.h5','rownames')
-cg <- 2^Mdat / (2^Mdat + 1)
-cg <- t(cg)
-rownames(cg) <- pheno_df[match(rownames(cg), pheno_df$barcode_id), 'mwas_id']
+idkey = read.csv('ROSMAP_IDkey.csv', header=T)
+rin_info = read.csv('ROSMAP_assay_rnaSeq_metadata.csv',header=T)
+rin_info = rin_info[,c("specimenID","RIN")]
+rin_info$projid = unlist(idkey[match(rin_info$specimenID,idkey$rnaseq_id),"projid"])
+rin_info$projid <- as.character(str_pad(rin_info$projid, width = 8, pad = "0", side = "left"))
+pheno_df$rin = unlist(rin_info[match(pheno_df$projid,rin_info$projid),"RIN"]) 
+
+cell.pro = read.table('ROSMAP_all_sample_methylation_ctp_with_clr_deconvolution.txt',header=T)
+cell_aligned <- cell.pro[pheno_df$barcode_id, , drop = FALSE]
+pheno_df <- cbind(pheno_df, cell_aligned)
+rownames(pheno_df) = pheno_df$mwas_id
+
+# prepare methylatioSample_Plate# prepare methylation matrix
+cg <- h5read("ROSMAP_methylaition/final_DNAm_invMdat.h5",'Mdat')
+colnames(cg) = h5read("/ROSMAP_methylaition/final_DNAm_invMdat.h5", 'colnames')
+rownames(cg) = h5read("/ROSMAP_methylaition/final_DNAm_invMdat.h5", 'rownames')
+
 sample = intersect(rownames(cg), pheno_df$mwas_id) 
 cg = cg[sample,]
-row.names(pheno_df) = pheno_df$mwas_id
 pheno_df = pheno_df[sample,]
+pheno_df[] <- lapply(pheno_df, function(x)
+  if (is.numeric(x)) replace(x, is.na(x), median(x, na.rm = TRUE)) else x
+)
 identical(row.names(pheno_df), rownames(cg))
 
 # Linear regression by cpgs Methylation
 run_linear_regression <- function(methylation_data, covariates) {
   data <- data.frame(methylation_level = methylation_data, covariates)
-  model <- lm(methylation_level ~ age_death + msex + NeuN_pos + Sample_Plate + batch, data = data)
+  model <- lm(methylation_level ~ age_death + msex + Study + pmi + rin + Exc + Inh + NonN_Astro_FGF3R + NonN_Endo + NonN_Micro + NonN_Oligo_MBP + NonN_OPC + Sample_Plate + batch, data = data)
   summary_model <- summary(model)
   return(summary_model$coefficients[2,])
 }
 analyze_methylation <- function(cg, pheno_df) {
   results <- apply(cg, 2, function(x) {
     methylation_data <- x  
-    covariates <- pheno_df %>% select(age_death, msex, NeuN_pos, Sample_Plate, batch)  
+    covariates <- pheno_df %>% select(age_death, msex, Study, pmi, rin, Exc, Inh, NonN_Astro_FGF3R, NonN_Endo, NonN_Micro, NonN_Oligo_MBP, NonN_OPC, Sample_Plate, batch)  
     result <- run_linear_regression(methylation_data, covariates)  
     return(result)
   })
@@ -49,4 +64,4 @@ colnames(res) <- c("Estimate", "StdErr", "pValue")
 res$cpg <- colnames(results)
 res <- res[,c("cpg", "Estimate", "StdErr", "pValue")]
 res$fdr <- p.adjust(res$pValue,'BH')
-save(res, file='ROSMAP_meth_age.RData')
+save(res, file='ROSMAP_meth_age_noDementia.RData')
