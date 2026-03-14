@@ -87,7 +87,7 @@ cg_df.cluster$Cluster <- as.factor(cg_df.cluster$Cluster)
 
 # Prepare plots for each cluster
 cluster_gg <- list()
-for (cluster in 1:4) {
+for (cluster in 1:2) {
   cluster_data <- filter(cg_df.cluster, Cluster == cluster)
   cluster_gg[[cluster]] <- ggplot(cluster_data, aes(x = age, y = BetaValue)) +
     theme_classic(base_size = 9) +
