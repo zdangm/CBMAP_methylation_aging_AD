@@ -21,7 +21,7 @@ library(patchwork)
 library(RColorBrewer)
 
 load('meta_hml4level.RData')
-cpg = meta_final_ordered_df$cpg[which(meta_final_ordered_df$pVal.final<0.05)] 
+all.cpg = meta_final_ordered_df$cpg[which(! is.na(meta_final_ordered_df$pVal.final))] 
 load('CBMAP_pheno.RData')
 all_sample_info <- as.data.frame(read.csv("CBMAP_sample_info.csv",header=T)) 
 selected_sample = all_sample_info[!is.na(all_sample_info[,'ADNC']),]
@@ -44,12 +44,34 @@ pheno_df$AD <- selected_sample[match(pheno_df$Sample_Name, selected_sample$id), 
 pheno_df <- pheno_df[!is.na(pheno_df$AD),] 
 pheno_df <- pheno_df[which(! pheno_df$Sample_Name %chin% exclued_id),]
 # methylation matrix
-cg <- h5read("final_DNAm_invMdat.h5",'Mdat')
-colnames(cg) = h5read("final_DNAm_invMdat.h5",'colnames')
-rownames(cg) = h5read("final_DNAm_invMdat.h5",'rownames')
-cg = cg[,grep("cg",colnames(cg))] 
+Mdat <- h5read("final_DNAm_Mdat.h5",'Mdat')
+colnames(Mdat) = h5read("final_DNAm_Mdat.h5",'colnames')
+rownames(Mdat) = h5read("final_DNAm_Mdat.h5",'rownames')
+Mdat = Mdat[grep("cg",rownames(Mdat)),]
+cg <- 2^Mdat / (2^Mdat + 1)
+cg <- t(cg)
 sample = intersect(rownames(cg), rownames(pheno_df)) 
-cg <- cg[sample,cpg]
+cg <- cg[sample,]
+pheno_df <- pheno_df[sample,]
+pheno_df$sex_male <- as.factor(pheno_df$sex_male)
+pheno_df$Sample_Plate <- as.factor(pheno_df$Sample_Plate)
+pheno_df$bank <- as.factor(pheno_df$bank)
+
+cell.pro = read.table('CBMAP_all_sample_methylation_ctp_with_clr_deconvolution.txt',header=T)
+cell_aligned <- cell.pro[pheno_df$barcode_id, , drop = FALSE]
+pheno_df <- cbind(pheno_df, cell_aligned)
+pheno_df[] <- lapply(pheno_df, function(x)
+  if (is.numeric(x)) replace(x, is.na(x), median(x, na.rm = TRUE)) else x
+)
+identical(rownames(pheno_df), rownames(cg))
+
+# extract high variance cpg
+var_cpg <- apply(cg, 2, var)
+threshold_lowest_20 <- quantile(var_cpg, 0.2)
+cpg_ids <- names(var_cpg)[var_cpg >= threshold_lowest_20]
+cpg_ids <- unique(intersect(all.cpg,cpg_ids)) # 271188
+cg = cg[,cpg_ids]
+
 
 wgcna <- function(data){
   print(dim(data))
@@ -194,38 +216,31 @@ wgcna <- function(data){
 adnc_lim_all <- wgcna(cg)
 save(adnc_lim_all, file = "meta_WGCNA_res.RData")
 
-sample_infor = merge(pheno_df[,c(2,5,7,8,12,14)], selected_sample[,c(1,33,49,51)], by.x='Sample_Name', by.y='id')
-colnames(sample_infor) = c('id','Sample_Plate','sex_male','age','NeuN_pos','adnc_num','Braak.NFT.stage','A_beta_0_3','C_cerad_0_3')
+sample_infor = merge(pheno_df[,c(2,5:8,10:11,14:21)], selected_sample[,c(1,33,49,51)], by.x='Sample_Name', by.y='id')
 lm_res = data.frame('me'=NA, 'trait'=NA, 'B'=NA, 'P.Value'=NA)
 module_trait_cor <- function(data){
   me <- data$MEs[,2:ncol(data$MEs)]
-  
-  trait <- data.frame(
-    id = sample_infor$id[match(rownames(me),sample_infor$id)],
-    adnc = sample_infor$adnc_num[match(rownames(me),sample_infor$id)],
-    age = sample_infor$age[match(rownames(me),sample_infor$id)],
-    sex = sample_infor$sex_male[match(rownames(me),sample_infor$id)],
-    braak = sample_infor$Braak.NFT.stage[match(rownames(me),sample_infor$id)],
-    abeta = sample_infor$A_beta_0_3[match(rownames(me),sample_infor$id)],
-    cscore = sample_infor$C_cerad_0_3[match(rownames(me),sample_infor$id)],
-    Sample_Plate = sample_infor$Sample_Plate[match(rownames(me),sample_infor$id)],
-    NeuN_pos = sample_infor$NeuN_pos[match(rownames(me),sample_infor$id)]
-  )
+
+  trait = data.frame(matrix(ncol=ncol(sample_infor),nrow = nrow(me)))
+  for (i in 1:ncol(sample_infor)) {
+    trait[,i] = sample_infor[,i][match(rownames(me),sample_infor$Sample_Name)]
+  }
+  colnames(trait) = colnames(sample_infor)
   trait$Sample_Plate = factor(trait$Sample_Plate)
+  trait$bank = factor(trait$bank)
+
   # linear
-  sample = intersect(rownames(me),trait$id)
-  rownames(trait) = trait$id
-  me = me[sample,]; trait = trait[sample,]
+  rownames(trait) = trait$Sample_Name
   identical(rownames(me),rownames(trait))
-  for (pheno in c('age','adnc','braak','abeta','cscore')) {
+  for (pheno in c('age','AD','Braak.NFT.stage','A_beta_0_3','C_cerad_0_3')) {
     for (i in 1:ncol(me)) {
-      if (pheno %chin% c('adnc','braak','abeta','cscore')){
-        fit <- lm(me[,i] ~ trait[,pheno] + age + sex + Sample_Plate + NeuN_pos, data=trait)
+      if (pheno %chin% c('AD','Braak.NFT.stage','A_beta_0_3','C_cerad_0_3')){
+        fit <- lm(me[,i] ~ trait[,pheno] + sex_male + age + bank + PMD + RIN + Exc + Inh + NonN_Astro_FGF3R + NonN_Endo + NonN_Micro + NonN_Oligo_MBP + NonN_OPC + Sample_Plate, data=trait)
       } else {
-        fit <- lm(me[,i] ~ trait[,pheno], data=trait)
+        fit <- lm(me[,i] ~ trait[,pheno] + sex_male + bank + PMD + RIN + Exc + Inh + NonN_Astro_FGF3R + NonN_Endo + NonN_Micro + NonN_Oligo_MBP + NonN_OPC + Sample_Plate, data=trait)
       }
-      res <- data.frame('me'=colnames(me)[i], 'trait'=pheno, 
-                        'B'=summary(fit)$coefficients[2,1], 
+      res <- data.frame('me'=colnames(me)[i], 'trait'=pheno,
+                        'B'=summary(fit)$coefficients[2,1],
                         'P.Value'=summary(fit)$coefficients[2,4])
       lm_res = rbind(lm_res, res)
     }
@@ -233,7 +248,7 @@ module_trait_cor <- function(data){
   lm_res = lm_res[-1,]
   lm_res <- lm_res %>%
     group_by(trait) %>%
-    mutate(adj.P.Val = p.adjust(P.Value, method = "fdr")) %>%
+    mutate(adj.P.Val = p.adjust(P.Value, method = "BH")) %>%
     ungroup()
   return(lm_res)
 }
@@ -244,5 +259,5 @@ module_trait_all$trait <- ifelse(module_trait_all$trait=='age','Age',
                                                       ifelse(module_trait_all$trait == 'abeta','A-beta',
                                                              ifelse(module_trait_all$trait == 'cscore','C-score',NA)))))
 module_trait_all$pmarker <- ifelse(module_trait_all$adj.P.Val < 0.05, "*", '')
-module_trait_all$me <- factor(module_trait_all$me, levels = paste0('ME', 1:39))
+module_trait_all$me <- factor(module_trait_all$me, levels = paste0('ME', 1:99))
 module_trait_all$trait <- factor(module_trait_all$trait, levels = c('Age','ADNC','Braak.NFT.stage','A-beta','C-score'))
