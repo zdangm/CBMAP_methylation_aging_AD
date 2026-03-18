@@ -40,6 +40,6 @@ result <- merge(res,anno_935k,by.x='cpg',by.y='Name')
 cg <- t(cg)
 
 ###dmrff
-age_dmr <- dmrff(estimate = result$Estimate,se=result$StdErr,p.value = as.vector(result$p),methylation = cg,chr=result$CHR,pos=as.numeric(result$MAPINFO))
+age_dmr <- dmrff(estimate = result$Estimate,se=result$StdErr,p.value = as.vector(result$pvalue),methylation = cg,chr=result$CHR,pos=as.numeric(result$MAPINFO))
 age_dmr_sig <- age_dmr[age_dmr$p.adjust < 0.05 & age_dmr$n >= 2, ]
 save(age_dmr_sig,file = 'age_dmr_sig.RData')
