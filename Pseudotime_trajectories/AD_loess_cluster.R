@@ -110,7 +110,7 @@ print(p4)
 dev.off()
 
 # Enrichment analysis 
-cpg_gene_res = fread('cis_eQTM_all_res.txt',header=T)
+cpg_gene_res = fread('/eQTM/cis_eQTM_all_res_clr.txt',header=T)
 cpg_gene_res <- cpg_gene_res %>%
   group_by(cpg) %>%
   mutate(fdr = p.adjust(pvalue, method = "fdr")) %>%
