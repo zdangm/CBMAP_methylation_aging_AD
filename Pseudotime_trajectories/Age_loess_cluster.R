@@ -36,7 +36,7 @@ residuals_matrix <- matrix(NA, nrow = nrow(cg), ncol = ncol(cg))
 colnames(residuals_matrix) <- colnames(cg)
 rownames(residuals_matrix) <- rownames(cg)
 for (cpg in colnames(cg)) {
-  lm_model <- lm(cg[, cpg] ~ sex_male + bank + PMD + RIN + Exc + Inh + NonN_Astro_FGF3R + NonN_Endo + NonN_Micro + NonN_Oligo_MBP + NonN_OPC + Sample_Plate, data = pheno_df)
+  lm_model <- lm(cg[, cpg] ~ sex_male + bank + PMD + RIN + Exc + Inh + NonN_Astro_FGF3R + NonN_Endo + NonN_Micro + NonN_Oligo_MBP + Sample_Plate, data = pheno_df)
   residuals_matrix[, cpg] <- residuals(lm_model)
 }
 h5write(residuals_matrix, "residual_methy", "residual_methy")
