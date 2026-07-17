@@ -65,7 +65,7 @@ pheno_df[] <- lapply(pheno_df, function(x)
 )
 identical(rownames(pheno_df), rownames(cg))
 
-anno_935k = read.csv('/share/shared_data/China_Brain_MultiOmics/methylation/935k_annotation/EPIC-8v2-0_A1.csv',header=T)
+anno_935k = read.csv('/methylation/935k_annotation/EPIC-8v2-0_A1.csv',header=T)
 anno_935k = anno_935k[-c(1:6),]
 colnames(anno_935k) = anno_935k[1,]
 anno_935k = anno_935k[-1,]
