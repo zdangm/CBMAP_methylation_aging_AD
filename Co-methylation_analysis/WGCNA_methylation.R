@@ -65,6 +65,15 @@ pheno_df[] <- lapply(pheno_df, function(x)
 )
 identical(rownames(pheno_df), rownames(cg))
 
+anno_935k = read.csv('/share/shared_data/China_Brain_MultiOmics/methylation/935k_annotation/EPIC-8v2-0_A1.csv',header=T)
+anno_935k = anno_935k[-c(1:6),]
+colnames(anno_935k) = anno_935k[1,]
+anno_935k = anno_935k[-1,]
+anno_935k = anno_935k[!duplicated(anno_935k$Name), ]
+anno_935k = anno_935k$Name[which(anno_935k$CHR %chin% paste0('chr',1:22))]
+c0 = intersect(anno_935k,colnames(cg))
+cg = cg[,c0]
+                     
 # extract high variance cpg
 var_cpg <- apply(cg, 2, var)
 threshold_lowest_20 <- quantile(var_cpg, 0.2)
