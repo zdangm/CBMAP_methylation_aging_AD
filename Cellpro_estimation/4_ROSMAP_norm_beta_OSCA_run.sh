@@ -36,17 +36,6 @@ osca \
 --befile ${qc}/${filen} \
 --update-opi ${ref}/450K.opi
 
-
-
-# Apply filters
-osca \
---befile ${qc}/${filen} \
---sd-min 0.02 \
---extract-probe ${ref}/450K_aut.probe \
---exclude-probe ${ref}/450K_mask.probe \
---make-efile \
---out ${analysis}/${filen}_sd02_aut_mask.txt
-
 #---------------------
 # Remove sd02 filter
 osca \
