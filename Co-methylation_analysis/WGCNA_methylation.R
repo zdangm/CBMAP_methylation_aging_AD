@@ -312,7 +312,7 @@ openxlsx::write.xlsx(module_trait_all,'/methylation/methy_AD_revision2/results/W
 setwd('/methylation/methy_AD_revision2/results/WGCNA')
 datKME=signedKME(cg, adnc_lim_all$MEs, outputColumnName="kME_MM.")
 hubcpg = list()
-modules_of_interest <- c(7,8,31,37,39,40)
+modules_of_interest <- c(7,12,18,19,25,26,29,30,34,35,42,45)
 for (mod in modules_of_interest) {
   mod_col <- paste0("kME_MM.", mod)
   top_cpg <- rownames(datKME)[order(-abs(datKME[[mod_col]]))][1:50]
@@ -320,7 +320,7 @@ for (mod in modules_of_interest) {
 }
 
 hubcpg = list()
-for (i in c(7,8,31,37,39,40)) {
+for (i in c(7,12,18,19,25,26,29,30,34,35,42,45)) {
   hubcpg[[paste0("ME", i)]] = names(net$colors)[which(net$colors == i)]
 }
 cpg_gene_res = read.table('/eQTM/cis_eQTM_all_res_clr.txt',header=T)
