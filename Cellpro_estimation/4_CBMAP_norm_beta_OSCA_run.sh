@@ -36,23 +36,12 @@ osca \
 --befile ${qc}/${filen} \
 --update-opi ${ref}/935k.opi
 
-
-
-# Apply filters
-osca \
---befile ${qc}/${filen} \
---sd-min 0.02 \
---extract-probe ${ref}/935k_EPIC_aut.probe \
---exclude-probe ${ref}/935k_EPIC_mask.probe \
---make-efile \
---out ${analysis}/${filen}_sd02_aut_mask.txt
-
 #---------------------
 # Remove sd02 filter
 osca \
 --befile ${qc}/${filen} \
---extract-probe ${ref}/450K_aut.probe \
---exclude-probe ${ref}/450K_mask.probe \
+--extract-probe ${ref}/935K_EPIC_aut.probe \
+--exclude-probe ${ref}/935K_EPIC_mask.probe \
 --make-bod \
 --out ${analysis}/${filen}_aut_mask
 
