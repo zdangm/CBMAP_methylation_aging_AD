@@ -31,8 +31,6 @@ rm(mer1)
 pheno_info$barcode_id = paste0(pheno_info$Sentrix_ID,'_',pheno_info$Sentrix_Position)
 pheno_info = distinct(pheno_info)
 rownames(pheno_info) = pheno_info$barcode_id
-#5822038012_R02C01  TBI-AUTO73203-PT-35OA  has missing sex and age_death
-pheno_info = pheno_info[-which(rownames(pheno_info)=='5822038012_R02C01'),]
 write.table(pheno_info, file='/methylation/data/ROSMAP_methylaition/phenotype.txt', row.names=T, col.names=T, quote=F)
 
 
