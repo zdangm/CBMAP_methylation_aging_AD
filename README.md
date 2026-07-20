@@ -3,3 +3,5 @@ We constructed the first large-scale brain methylation atlas for the East Asian 
 
 This repo contains code for:
 Jing Zhang, Dan Zhou, Wenli Zhai et al. Epigenetic Rewiring Connects Aging to Alzheimer’s Pathology in the Human Prefrontal Cortex, 28 August 2025, PREPRINT (Version 1) available at Research Square [https://doi.org/10.21203/rs.3.rs-7381745/v1]
+
+The results corresponding to this repository are available on Zenodo: [https://doi.org/10.5281/zenodo.21449674]
